@@ -26,6 +26,11 @@ fn main() {
 
     reactor.register_client_with_handler(client, move |client, message| {
         if let Command::PRIVMSG(ref target, ref msg) = message.command {
+            let mut target = target.to_owned();
+            if target == client.current_nickname() {
+                target = message.source_nickname().unwrap().to_string();
+            }
+            print!("{}", message);
             if msg.starts_with(client.current_nickname()) {
                 let re = Regex::new(&format!("^{}[^a-zA-Z0-9]*", client.current_nickname())).unwrap();
                 let msg = re.replace(msg, "");
@@ -34,10 +39,10 @@ fn main() {
                     let key = get_key_from_question(&msg);
                     match cask.get(&key) {
                         Ok(v) => match v {
-                            Some(value) => client.send_privmsg(target, &format!("{} is {}", key, str::from_utf8(&value).unwrap()))?,
-                            None => client.send_privmsg(target, &format!("I don't know about {}", key))?,
+                            Some(value) => client.send_privmsg(&target, &format!("{} is {}", key, str::from_utf8(&value).unwrap()))?,
+                            None => client.send_privmsg(&target, &format!("I don't know about {}", key))?,
                         },
-                        Err(_) => client.send_privmsg(target, &format!("Something went wrong when looking up {}", key))?,
+                        Err(_) => client.send_privmsg(&target, &format!("Something went wrong when looking up {}", key))?,
                     }
                 } else if msg.contains(" is <reply> ") {
                     let mut splitter = msg.splitn(2, " is <reply> ");
@@ -53,7 +58,7 @@ fn main() {
                     let key = msg.trim().to_lowercase();
                     match replies.get(key) {
                         Ok(v) => match v {
-                            Some(value) => client.send_privmsg(target, str::from_utf8(&value).unwrap())?,
+                            Some(value) => client.send_privmsg(&target, str::from_utf8(&value).unwrap())?,
                             None => {},
                         },
                         Err(_) => {},
