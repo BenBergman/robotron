@@ -1,0 +1,9 @@
+[package]
+name = "robotron"
+version = "0.1.0"
+authors = ["Ben Bergman <ben@benbergman.ca>"]
+
+[dependencies]
+irc = "0.13.5"
+cask = { git = "https://github.com/andresilva/cask.git" }
+regex = "1.0.1"
