@@ -57,7 +57,7 @@ fn main() {
 
     let info_recall = handler!("InfoRecall", r"^what is (?P<key>.+)", move |matches, _| {
         let key = matches.name("key").unwrap();
-        match cask_recall.get(&key) {
+        match cask_recall.get(&key.to_lowercase()) {
             Ok(v) => match v {
                 Some(v) => Some(format!("{} is {}", key, str::from_utf8(&v).unwrap())),
                 None => None,
@@ -79,7 +79,7 @@ fn main() {
 
     let reply_recall = handler!("ReplyRecall", r"^(?P<key>.+)", move |matches, _| {
         let key = matches.name("key").unwrap();
-        match cask_recall.get(&key) {
+        match cask_recall.get(&key.to_lowercase()) {
             Ok(v) => match v {
                 Some(v) => Some(str::from_utf8(&v).unwrap().to_string()),
                 None => None,
