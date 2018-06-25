@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Ben Bergman <ben@benbergman.ca>"]
 
 [dependencies]
-irc = "0.13.5"
+chatbot = { git = "https://github.com/jwilm/chatbot.git", features = ["irc-adapter", "slack-adapter"] }
 cask = { git = "https://github.com/andresilva/cask.git" }
 regex = "1.0.1"

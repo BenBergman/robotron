@@ -1,10 +1,12 @@
-extern crate irc;
+#[macro_use(handler)]
+extern crate chatbot;
 extern crate cask;
-extern crate regex;
 
 use std::str;
-use regex::Regex;
-use irc::client::prelude::*;
+
+use chatbot::Chatbot;
+use chatbot::adapter::{CliAdapter, IrcAdapter};
+
 use cask::CaskOptions;
 
 fn main() {
@@ -13,76 +15,61 @@ fn main() {
         .unwrap();
 
 
-    let replies = CaskOptions::default()
-        .open("replies.db")
-        .unwrap();
+    let name = "robotron";
+    let mut bot = Chatbot::new(name);
 
+    bot.add_adapter(CliAdapter::new(name));
+    {
+        let config = chatbot::adapter::IrcConfig {
+            nickname: Some(format!("{}", name)),
+            alt_nicks: Some(vec![format!("{}_", name), format!("{}__", name)]),
+            server: Some(format!("chat.freenode.net")),
+            channels: Some(vec![format!("#whatme")]),
+            .. Default::default()
+        };
+        bot.add_adapter(IrcAdapter::new(config, name))
+    };
 
-    let config = Config::load("config.toml").unwrap();
+    let ping = handler!("PingHandler", r"ping", |_, _| { Some("pong".to_owned()) });
 
-    let mut reactor = IrcReactor::new().unwrap();
-    let client = reactor.prepare_client_and_connect(&config).unwrap();
-    client.identify().unwrap();
-
-    reactor.register_client_with_handler(client, move |client, message| {
-        if let Command::PRIVMSG(ref target, ref msg) = message.command {
-            let mut target = target.to_owned();
-            if target == client.current_nickname() {
-                target = message.source_nickname().unwrap().to_string();
-            }
-            print!("{}", message);
-            if msg.starts_with(client.current_nickname()) {
-                let re = Regex::new(&format!("^{}[^a-zA-Z0-9]*", client.current_nickname())).unwrap();
-                let msg = re.replace(msg, "");
-
-                if message_is_question(&msg) {
-                    let key = get_key_from_question(&msg);
-                    match cask.get(&key) {
-                        Ok(v) => match v {
-                            Some(value) => client.send_privmsg(&target, &format!("{} is {}", key, str::from_utf8(&value).unwrap()))?,
-                            None => client.send_privmsg(&target, &format!("I don't know about {}", key))?,
-                        },
-                        Err(_) => client.send_privmsg(&target, &format!("Something went wrong when looking up {}", key))?,
-                    }
-                } else if msg.contains(" is <reply> ") {
-                    let mut splitter = msg.splitn(2, " is <reply> ");
-                    let key = splitter.next().unwrap();
-                    let value = splitter.next().unwrap();
-                    replies.put(key.to_lowercase(), value).unwrap();
-                } else if msg.contains(" is ") {
-                    let mut splitter = msg.splitn(2, " is ");
-                    let key = splitter.next().unwrap();
-                    let value = splitter.next().unwrap();
-                    cask.put(key.to_lowercase(), value).unwrap();
-                } else {
-                    let key = msg.trim().to_lowercase();
-                    match replies.get(key) {
-                        Ok(v) => match v {
-                            Some(value) => client.send_privmsg(&target, str::from_utf8(&value).unwrap())?,
-                            None => {},
-                        },
-                        Err(_) => {},
-                    }
-                }
-            }
+    let trout = handler!("TroutSlap", r"slap (?P<user>.+)", move |matches, _| {
+        match matches.name("user") {
+            Some(user) => {
+                Some(format!("{} slaps {} around a bit with a large trout",
+                             name, user))
+            },
+            None => None
         }
-        Ok(())
     });
 
-    reactor.run().unwrap();
-}
+    let echo = handler!("EchoHandler", r"echo (?P<msg>.+)", |matches, _| {
+        matches.name("msg").map(|msg| { msg.to_owned() })
+    });
 
+    let cask_store = cask.clone();
 
-fn message_is_question(msg: &str) -> bool {
-    if msg.to_lowercase().starts_with("what") {
-        return true;
-    }
+    let info_store = handler!("InfoStore", r"(?P<key>.+) is (?P<value>.+)", move |matches, _| {
+        let key = matches.name("key").unwrap();
+        let value = matches.name("value").unwrap();
+        cask_store.put(key.to_lowercase(), value).unwrap();
+        None
+    });
 
-    return false;
-}
+    let cask_recall = cask.clone();
 
+    let info_recall = handler!("InfoRecall", r"^what is (?P<key>.+)", move |matches, _| {
+        let key = matches.name("key").unwrap();
+        match cask_recall.get(&key) {
+            Ok(v) => Some(str::from_utf8(&v.unwrap()).unwrap().to_string()),
+            Err(_) => None,
+        }
+    });
 
-fn get_key_from_question(msg: &str) -> String {
-    let re = Regex::new(r"^what (is )?").unwrap();
-    return re.replace(&msg.to_lowercase(), "").to_string();
+    bot.add_handler(ping);
+    bot.add_addressed_handler(trout);
+    bot.add_handler(echo);
+    bot.add_handler(info_store);
+    bot.add_handler(info_recall);
+
+    bot.run();
 }
