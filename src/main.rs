@@ -20,20 +20,13 @@ fn main() {
         .unwrap();
 
 
-    let name = "robotron";
-    let mut bot = Chatbot::new(name);
 
-    bot.add_adapter(CliAdapter::new(name));
-    {
-        let config = chatbot::adapter::IrcConfig {
-            nickname: Some(format!("{}", name)),
-            alt_nicks: Some(vec![format!("{}_", name), format!("{}__", name)]),
-            server: Some(format!("chat.freenode.net")),
-            channels: Some(vec![format!("#whatme")]),
-            .. Default::default()
-        };
-        bot.add_adapter(IrcAdapter::new(config, name))
-    };
+    let config = chatbot::adapter::IrcConfig::load("config.toml").unwrap();
+    let name = config.clone().nickname.unwrap();
+    let mut bot = Chatbot::new(&name);
+
+    bot.add_adapter(CliAdapter::new(&name));
+    bot.add_adapter(IrcAdapter::new(config, &name));
 
     let ping = handler!("PingHandler", r"ping", |_, _| { Some("pong".to_owned()) });
 
