@@ -15,6 +15,11 @@ fn main() {
         .unwrap();
 
 
+    let replies = CaskOptions::default()
+        .open("replies.db")
+        .unwrap();
+
+
     let name = "robotron";
     let mut bot = Chatbot::new(name);
 
@@ -60,7 +65,32 @@ fn main() {
     let info_recall = handler!("InfoRecall", r"^what is (?P<key>.+)", move |matches, _| {
         let key = matches.name("key").unwrap();
         match cask_recall.get(&key) {
-            Ok(v) => Some(str::from_utf8(&v.unwrap()).unwrap().to_string()),
+            Ok(v) => match v {
+                Some(v) => Some(format!("{} is {}", key, str::from_utf8(&v).unwrap())),
+                None => None,
+            },
+            Err(_) => None,
+        }
+    });
+
+    let cask_store = replies.clone();
+
+    let reply_store = handler!("ReplyStore", r"(?P<key>.+) is <reply> (?P<value>.+)", move |matches, _| {
+        let key = matches.name("key").unwrap();
+        let value = matches.name("value").unwrap();
+        cask_store.put(key.to_lowercase(), value).unwrap();
+        None
+    });
+
+    let cask_recall = replies.clone();
+
+    let reply_recall = handler!("ReplyRecall", r"^(?P<key>.+)", move |matches, _| {
+        let key = matches.name("key").unwrap();
+        match cask_recall.get(&key) {
+            Ok(v) => match v {
+                Some(v) => Some(str::from_utf8(&v).unwrap().to_string()),
+                None => None,
+            },
             Err(_) => None,
         }
     });
@@ -70,6 +100,8 @@ fn main() {
     bot.add_handler(echo);
     bot.add_handler(info_store);
     bot.add_handler(info_recall);
+    bot.add_handler(reply_store);
+    bot.add_handler(reply_recall);
 
     bot.run();
 }
