@@ -28,8 +28,6 @@ fn main() {
     bot.add_adapter(CliAdapter::new(&name));
     bot.add_adapter(IrcAdapter::new(config, &name));
 
-    let ping = handler!("PingHandler", r"ping", |_, _| { Some("pong".to_owned()) });
-
     let trout = handler!("TroutSlap", r"slap (?P<user>.+)", move |matches, _| {
         match matches.name("user") {
             Some(user) => {
