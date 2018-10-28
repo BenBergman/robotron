@@ -38,7 +38,7 @@ fn main() {
         }
     });
 
-    let echo = handler!("EchoHandler", r"echo (?P<msg>.+)", |matches, _| {
+    let echo = handler!("EchoHandler", r"^echo (?P<msg>.+)", |matches, _| {
         matches.name("msg").map(|msg| { msg.to_owned() })
     });
 
@@ -53,7 +53,7 @@ fn main() {
 
     let cask_recall = cask.clone();
 
-    let info_recall = handler!("InfoRecall", r"^what is (?P<key>.+)", move |matches, _| {
+    let info_recall = handler!("InfoRecall", r"(?i)^what is (?P<key>.+?)\?*$", move |matches, _| {
         let key = matches.name("key").unwrap();
         match cask_recall.get(&key.to_lowercase()) {
             Ok(v) => match v {
