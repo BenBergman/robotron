@@ -73,6 +73,28 @@ fn main() {
         None
     });
 
+    let cask_recall = cask.clone();
+    let cask_store = replies.clone();
+
+    let info_drop = handler!("InfoDrop", r"(?i)^forget (?P<key>.+?)$", move |matches, _| {
+        let key = matches.name("key").unwrap();
+        match cask_recall.get(&key.to_lowercase()) {
+            Ok(Some(_)) => match cask_recall.delete(&key.to_lowercase()) {
+                Ok(()) => Some(format!("Forgot {}", key)),
+                Err(_) => None,
+            },
+            Ok(None) => match cask_store.get(&key.to_lowercase()) {
+                Ok(Some(_)) => match cask_store.delete(&key.to_lowercase()) {
+                    Ok(()) => Some(format!("Forgot {}", key)),
+                    Err(_) => Some(format!("Couldn't find any info for {}", key)),
+                },
+                Ok(None) => None,
+                Err(_) => None,
+            },
+            Err(_) => None,
+        }
+    });
+
     let cask_recall = replies.clone();
 
     let reply_recall = handler!("ReplyRecall", r"^(?P<key>.+)", move |matches, _| {
@@ -93,6 +115,7 @@ fn main() {
     bot.add_handler(info_store);
     bot.add_handler(info_recall);
     bot.add_handler(reply_store);
+    bot.add_handler(info_drop);
     bot.add_handler(reply_recall);
     bot.add_addressed_handler(help);
 
