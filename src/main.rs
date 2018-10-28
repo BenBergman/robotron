@@ -86,13 +86,15 @@ fn main() {
         }
     });
 
-    bot.add_handler(ping);
+    let help = handler!("HelpHandler", r"help", |_, _| { Some("https://github.com/benbergman/robotron".to_owned()) });
+
     bot.add_addressed_handler(trout);
     bot.add_handler(echo);
     bot.add_handler(info_store);
     bot.add_handler(info_recall);
     bot.add_handler(reply_store);
     bot.add_handler(reply_recall);
+    bot.add_addressed_handler(help);
 
     bot.run();
 }
