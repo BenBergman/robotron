@@ -80,7 +80,10 @@ fn main() {
         let key = matches.name("key").unwrap();
         match cask_recall.get(&key.to_lowercase()) {
             Ok(Some(_)) => match cask_recall.delete(&key.to_lowercase()) {
-                Ok(()) => Some(format!("Forgot {}", key)),
+                Ok(()) => match cask_store.delete(&key.to_lowercase()) {
+                    Ok(()) => Some(format!("Forgot {}", key)),
+                    Err(_) => Some(format!("Couldn't find any info for {}", key)),
+                },
                 Err(_) => None,
             },
             Ok(None) => match cask_store.get(&key.to_lowercase()) {
@@ -112,9 +115,9 @@ fn main() {
 
     bot.add_addressed_handler(trout);
     bot.add_handler(echo);
+    bot.add_handler(reply_store);
     bot.add_handler(info_store);
     bot.add_handler(info_recall);
-    bot.add_handler(reply_store);
     bot.add_handler(info_drop);
     bot.add_handler(reply_recall);
     bot.add_addressed_handler(help);
